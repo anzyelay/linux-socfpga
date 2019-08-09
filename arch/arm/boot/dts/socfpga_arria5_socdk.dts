@@ -139,7 +139,7 @@
 	flash: flash@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "n25q256a";
+		compatible = "s25fl512s";
 		reg = <0>;
 		spi-max-frequency = <100000000>;
 
@@ -154,14 +154,15 @@
 
 		partition@qspi-boot {
 			/* 8MB for raw data. */
-			label = "Flash 0 Raw Data";
+			label = "uboot-image-dts";
 			reg = <0x0 0x800000>;
+			read-only;
 		};
 
 		partition@qspi-rootfs {
 			/* 120MB for jffs2 data. */
-			label = "Flash 0 jffs2 Filesystem";
-			reg = <0x800000 0x7800000>;
+			label = "jffs2 Filesystem";
+			reg = <0x800000 0x3800000>;
 		};
 	};
 };

@@ -93,6 +93,7 @@ struct flash_info {
 
 #define JEDEC_MFR(info)	((info)->id[0])
 
+static int is_s25fl512s=0;	//zyd++ patch for s25fl512s
 static const struct flash_info *spi_nor_match_id(const char *name);
 
 /*
@@ -2293,7 +2294,6 @@ static int spi_nor_parse_sfdp(struct spi_nor *nor,
 	    header.major != SFDP_JESD216_MAJOR ||
 	    header.minor < SFDP_JESD216_MINOR)
 		return -EINVAL;
-
 	/*
 	 * Verify that the first and only mandatory parameter header is a
 	 * Basic Flash Parameter Table header as specified in JESD216.
@@ -2328,27 +2328,31 @@ static int spi_nor_parse_sfdp(struct spi_nor *nor,
 			goto exit;
 		}
 	}
-
+	
 	/*
 	 * Check other parameter headers to get the latest revision of
 	 * the basic flash parameter table.
 	 */
 	for (i = 0; i < header.nph; i++) {
 		param_header = &param_headers[i];
-
-		if (SFDP_PARAM_HEADER_ID(param_header) == SFDP_BFPT_ID &&
+		
+		if( is_s25fl512s )
+			bfpt_header = param_header;
+		else
+		if (SFDP_PARAM_HEADER_ID(param_header) == SFDP_BFPT_ID &&		
 		    param_header->major == SFDP_JESD216_MAJOR &&
 		    (param_header->minor > bfpt_header->minor ||
 		     (param_header->minor == bfpt_header->minor &&
 		      param_header->length > bfpt_header->length)))
 			bfpt_header = param_header;
 	}
-
+	
 	err = spi_nor_parse_bfpt(nor, bfpt_header, params);
 	if (err)
 		goto exit;
 
 	/* Parse other parameter headers. */
+	if( !is_s25fl512s )
 	for (i = 0; i < header.nph; i++) {
 		param_header = &param_headers[i];
 
@@ -2710,7 +2714,7 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 		info = spi_nor_read_id(nor);
 	if (IS_ERR_OR_NULL(info))
 		return -ENOENT;
-
+	
 	/*
 	 * If caller has specified name of flash model that can normally be
 	 * detected using JEDEC, let's verify it.
@@ -2736,7 +2740,8 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	}
 
 	mutex_init(&nor->lock);
-
+	
+	is_s25fl512s = (strncmp(info->name, "s25fl512s", strlen("s25fl512s"))==0) ? 1 : 0;	//zyd++
 	/*
 	 * Make sure the XSR_RDY flag is set before calling
 	 * spi_nor_wait_till_ready(). Xilinx S3AN share MFR
