@@ -2260,6 +2260,17 @@ static int spi_nor_parse_bfpt(struct spi_nor *nor,
 	return 0;
 }
 
+//anzyelay -->
+static void spi_nor_reboot(struct mtd_info *mtd)
+{
+	struct spi_nor *nor = mtd_to_spi_nor(mtd);
+	int ret = nor->write_reg(nor, 0xf0, NULL, 0);
+	if(ret < 0)
+	{
+		dev_err(nor->dev, "error while reset device\n");
+	}
+}
+//anzyelay <--
 /**
  * spi_nor_parse_sfdp() - parse the Serial Flash Discoverable Parameters.
  * @nor:		pointer to a 'struct spi_nor'
@@ -2338,8 +2349,7 @@ static int spi_nor_parse_sfdp(struct spi_nor *nor,
 		
 		if( is_s25fl512s )
 			bfpt_header = param_header;
-		else
-		if (SFDP_PARAM_HEADER_ID(param_header) == SFDP_BFPT_ID &&		
+		else if (SFDP_PARAM_HEADER_ID(param_header) == SFDP_BFPT_ID &&
 		    param_header->major == SFDP_JESD216_MAJOR &&
 		    (param_header->minor > bfpt_header->minor ||
 		     (param_header->minor == bfpt_header->minor &&
@@ -2353,21 +2363,21 @@ static int spi_nor_parse_sfdp(struct spi_nor *nor,
 
 	/* Parse other parameter headers. */
 	if( !is_s25fl512s )
-	for (i = 0; i < header.nph; i++) {
-		param_header = &param_headers[i];
+		for (i = 0; i < header.nph; i++) {
+			param_header = &param_headers[i];
 
-		switch (SFDP_PARAM_HEADER_ID(param_header)) {
-		case SFDP_SECTOR_MAP_ID:
-			dev_info(dev, "non-uniform erase sector maps are not supported yet.\n");
-			break;
+			switch (SFDP_PARAM_HEADER_ID(param_header)) {
+			case SFDP_SECTOR_MAP_ID:
+				dev_info(dev, "non-uniform erase sector maps are not supported yet.\n");
+				break;
 
-		default:
-			break;
+			default:
+				break;
+			}
+
+			if (err)
+				goto exit;
 		}
-
-		if (err)
-			goto exit;
-	}
 
 exit:
 	kfree(param_headers);
@@ -2672,7 +2682,7 @@ static int spi_nor_init(struct spi_nor *nor)
 	if ((nor->addr_width == 4) &&
 	    (JEDEC_MFR(nor->info) != SNOR_MFR_SPANSION) &&
 	    !(nor->info->flags & SPI_NOR_4B_OPCODES))
-		set_4byte(nor, nor->info, 1);
+			set_4byte(nor, nor->info, 1);
 
 	return 0;
 }
@@ -2682,8 +2692,8 @@ void spi_nor_restore(struct spi_nor *nor)
 	/* restore the addressing mode */
 	if ((nor->addr_width == 4) &&
 	    (JEDEC_MFR(nor->info) != SNOR_MFR_SPANSION) &&
-	    !(nor->info->flags & SPI_NOR_4B_OPCODES))
-		set_4byte(nor, nor->info, 0);
+		!(nor->info->flags & SPI_NOR_4B_OPCODES))
+			set_4byte(nor, nor->info, 0);
 }
 EXPORT_SYMBOL_GPL(spi_nor_restore);
 
@@ -2764,6 +2774,7 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	mtd->size = params.size;
 	mtd->_erase = spi_nor_erase;
 	mtd->_read = spi_nor_read;
+	mtd->_reboot = spi_nor_reboot;
 
 	/* NOR protection support for STmicro/Micron chips and similar */
 	if (JEDEC_MFR(info) == SNOR_MFR_MICRON ||
