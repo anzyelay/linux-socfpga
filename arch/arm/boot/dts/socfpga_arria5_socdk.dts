@@ -22,7 +22,7 @@
 	compatible = "altr,socfpga-arria5", "altr,socfpga";
 
 	chosen {
-		bootargs = "earlyprintk";
+		bootargs = "earlyprintk console=ttyS0,115200 rdinit=/linuxrc";
 		stdout-path = "serial0:115200n8";
 	};
 
@@ -160,16 +160,16 @@
 		};
 
 		partition@qspi-kernel {
-			/* 7MB for linux kernel. */
+			/* 9MB for linux kernel. */
 			label = "kernel";
-			reg = <0x100000 0x700000>;
+			reg = <0x100000 0x900000>;
 			read-only;
 		};
 
 		partition@qspi-rootfs {
-			/* 56MB for jffs2 data. */
+			/* 54MB for jffs2 data. */
 			label = "jffs2 Filesystem";
-			reg = <0x800000 0x3800000>;
+			reg = <0xA00000 0x3600000>;
 		};
 	};
 };
